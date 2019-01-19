@@ -30,42 +30,35 @@ and by counting the appearances of their phone's MAC addresses.
 """
 
 # initiate computer vision models
-smile_cascade = cv2.CascadeClassifier('/usr/share/OpenCV/haarcascades/haarcascade_smile.xml')
 MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
 
 ages = ['(0,2)','(4,6)','(8,12)','(15,20)','(25,32)','(38,43)','(48,53)','(60,100)']
-ageNames = ['baby','young child', 'child', 'teenager', 'in their twenties', 'in their thirties', 'in their forties', 'middleaged person']
 genders = ['male', 'female']
-mood = 'neutral'
-genderFrequency = [0,100]
-ageFrequency = [0,0,0,0,100,0,0,0,0]
-
-faceDetected = None
 
 impulseLikelyness = ['not', 'somewhat', 'quite', 'highly']
-# parameters for loading data and images
 emotion_model_path = './Emotion/models/emotion_model.hdf5'
 emotion_labels = get_labels('fer2013')
-
-# hyper-parameters for bounding boxes shape
 frame_window = 10
 emotion_offsets = (20, 40)
 
-# loading models
 face_cascade = cv2.CascadeClassifier('./Emotion/models/haarcascade_frontalface_default.xml')
 emotion_classifier = load_model(emotion_model_path)
 emotion_classifier._make_predict_function()
-
-# getting input model shapes for inference
 emotion_target_size = emotion_classifier.input_shape[1:3]
-
-# starting lists for calculating modes
 emotion_window = []
+
+mood = 'neutral'
+genderFrequency = [0,100]
+ageFrequency = [0,0,0,0,100,0,0,0,0]
+columnIndex = 0
+rowIndex = 0
+faceDetected = None
 
 macObjects = []
 start_time = time.time()
 myphone = None
-    
+
+
 cap = cv2.VideoCapture(0)
 cap.open(0)
 if (not cap.isOpened()):
@@ -79,15 +72,12 @@ translations = [(0.0, 1.6, -2.5),(-1.3, 1.7, -2.2),(.7, -.9, -1.8),
                 (-1.0, -2.0, -4),(1.1, 2.0, -4), (.5, -3.0, -5),(-2.5, 5.0, -6), (-1.5, -3.0, -15),(-2.5, 5.0, -12)]
 textures = []
 images = []
-
-columnIndex = 0
-rowIndex = 0
-
-circlesize = 300
-r = circlesize / 2
-s = 200
-
 running = 1
+
+
+
+
+
 image = pygame.image.load('./graphics/burger.png')
 
 u_time = None
@@ -173,7 +163,7 @@ def get_mac():
         
         for row in reader:
             
-            if "84:CF:BF:8B:CB:21" in row: #01:AB:CD:2E:AB:34
+            if 01:AB:CD:2E:AB:34 in row: # Should be MAC adress of target device
                 macObj = macAd(row[0], row[2], row[3])
     return macObj
  
@@ -199,7 +189,6 @@ def capture_loop(age_net, gender_net):
     global faceDetected
     
     face_cascade = cv2.CascadeClassifier('/usr/share/OpenCV/haarcascades/haarcascade_frontalface_alt.xml')    
-    smilesNum = 0
     myphoneNew = get_mac()
     
     myphone.update(myphoneNew)
@@ -237,12 +226,12 @@ def capture_loop(age_net, gender_net):
                 face_img = frame[y:y+h, x:x+w].copy()
                 blob = cv2.dnn.blobFromImage(face_img, 1, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
                           
-                #gender
+                
                 gender_net.setInput(blob)
                 gender_preds = gender_net.forward()
                 gi = gender_preds[0].argmax()
                 genderFrequency[gi] += 1
-                #age
+
                 age_net.setInput(blob)
                 age_preds = age_net.forward()
                 ai = age_preds[0].argmax()
@@ -256,7 +245,7 @@ def capture_loop(age_net, gender_net):
         if len(faces) == 0:
             faceDetected = False
     
-# Function for 
+# Function for recognizing emotions in detected face
 def emotions(gray_face):
     global mood
     gray_face = cv2.resize(gray_face, (emotion_target_size))
@@ -290,7 +279,7 @@ def emotions(gray_face):
 
     mood = emotion_mode
     
-######################## DISPLAY STUFF ##################################
+######################## DISPLAY FUNCTIONS ##################################
     
 def monitor():
     global genderFrequency
@@ -324,20 +313,69 @@ def monitor():
 
             genderFrequency = [0,100]
             ageFrequency = [0,0,0,0,100,0,0,0,0]
+        if faceDetected:    
+            for count, i in enumerate(textures[columnIndex][rowIndex]):
+                wobble(count, angle, i)
+
+            for count, j in enumerate(textures[columnIndex][2], len(textures[columnIndex][rowIndex]) +1) :
+                wobble(count, angle, j)
+                
+            displaytext(textTexid)    
+            pygame.display.flip()
+    shaders.glUseProgram( 0 )
+    
+# Load textures of product images to project on bubbles        
+def loadProductTextures():
+    with open('biasimages.csv', 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter='"')
+        
+        for countr, row in enumerate(reader):
+            textures.append([])
             
-        #if faceDetected:    
-        for count, i in enumerate(textures[columnIndex][rowIndex]):
-            wobble(count, angle, i)
+            for countc, column in enumerate(row):
+                textures[countr].append([])
+                images = column.split(",")
+                
+                for i in images:
+                    try:
+                        image = pygame.image.load("./graphics/"+i)  
+                    except:
+                        continue
+                    textureData = pygame.image.tostring(image, "RGBA", 1)
+                    texid = loadTextures(image, textureData)
+                    
+                    textures[countr][countc].append(texid)
 
-        for count, j in enumerate(textures[columnIndex][2], len(textures[columnIndex][rowIndex]) +1) :
-            wobble(count, angle, j)
-            
-        displaytext(textTexid)    
-        pygame.display.flip()
-    shaders.glUseProgram( 0 )    
+# OpenGL setup
+def gl():
+    global r
+    global running
+    global vertex_shader
+    global fragment_shader
+    global quadratic
+    global u_time
+      
+    quadratic = gluNewQuadric()
+    gluQuadricNormals(quadratic, GLU_SMOOTH)
+    gluQuadricTexture(quadratic, GL_TRUE)		
 
+    
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluPerspective(90.0, width/float(height), 1.0, 100.0)
+    glMatrixMode(GL_MODELVIEW)
+    glEnable(GL_DEPTH_TEST)
+    
+    glTranslatef(0.0,0.0,-5)
+    
+    vert = shaders.compileShader(vertex_shader, GL_VERTEX_SHADER)
+    frag = shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+    
+    shader = shaders.compileProgram(vert,frag)
+    u_time = glGetUniformLocation(shader, 'time')
+    shaders.glUseProgram(shader)
 
-
+# Create image containing information on detected categories
 def text(avgAge, avgGender, mood, numVisits):
 
     startHeight = 100
@@ -359,35 +397,10 @@ def text(avgAge, avgGender, mood, numVisits):
     textScreen.blit(extraLabel, (100, startHeight+230))
     classLabel = myfont.render("not religious, well-educated", 1, white)
     textScreen.blit(classLabel, (100, startHeight+280))
-    print(mood)
     return pygame.image.tostring(textScreen, "RGBA", 1)
-    
-
-        
-def loadProductTextures():
-    with open('biasimages.csv', 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter='"')
-        
-        # run past every column cell in a row and read its content as a list
-        for countr, row in enumerate(reader):
-            textures.append([])
-            
-            for countc, column in enumerate(row):
-                textures[countr].append([])
-                images = column.split(",") #yo
-                
-                for i in images:
-                    try:
-                        image = pygame.image.load("./graphics/"+i)  
-                    except:
-                        continue
-                    textureData = pygame.image.tostring(image, "RGBA", 1)
-                    texid = loadTextures(image, textureData)
-                    
-                    textures[countr][countc].append(texid)
-                    print(textures)
 
 
+# Create texture out of information image
 def loadTextures(image, textureData):   
     if image:
         image_width = image.get_width()
@@ -479,35 +492,7 @@ def displaytext(texid):
     glTexCoord2f(0.0, 1.0)
     glVertex3f(-1.0,  1.0, -1.0)
     glEnd()
-   
 
-def gl():
-    global r
-    global running
-    global vertex_shader
-    global fragment_shader
-    global quadratic
-    global u_time
-      
-    quadratic = gluNewQuadric()
-    gluQuadricNormals(quadratic, GLU_SMOOTH)
-    gluQuadricTexture(quadratic, GL_TRUE)		
-
-    
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluPerspective(90.0, width/float(height), 1.0, 100.0)
-    glMatrixMode(GL_MODELVIEW)
-    glEnable(GL_DEPTH_TEST)
-    
-    glTranslatef(0.0,0.0,-5)
-    
-    vert = shaders.compileShader(vertex_shader, GL_VERTEX_SHADER)
-    frag = shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
-    
-    shader = shaders.compileProgram(vert,frag)
-    u_time = glGetUniformLocation(shader, 'time')
-    shaders.glUseProgram(shader)
         
 if __name__ == '__main__':
     
