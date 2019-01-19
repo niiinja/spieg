@@ -29,7 +29,7 @@ This project shows the user their consumer profiles as assessed from their facia
 and by counting the appearances of their phone's MAC addresses.
 """
 
-# initiate computer vision models
+# Initiate models
 MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
 
 ages = ['(0,2)','(4,6)','(8,12)','(15,20)','(25,32)','(38,43)','(48,53)','(60,100)']
@@ -73,13 +73,6 @@ translations = [(0.0, 1.6, -2.5),(-1.3, 1.7, -2.2),(.7, -.9, -1.8),
 textures = []
 images = []
 running = 1
-
-
-
-
-
-image = pygame.image.load('./graphics/burger.png')
-
 u_time = None
 
 #################### OpenGL SHADERS ############################
@@ -120,6 +113,8 @@ in vec2 texcoord;
 void main() {
     frag_color = texture2D(Texture0, texcoord);
 }"""
+
+#################### WIFI TRACKING + FACIAL RECOGNITION ############################
 
 # Class for phone's MAC address    
 class macAd:
@@ -163,7 +158,7 @@ def get_mac():
         
         for row in reader:
             
-            if 01:AB:CD:2E:AB:34 in row: # Should be MAC adress of target device
+            if "01:AB:CD:2E:AB:34" in row: # Should be MAC adress of target device
                 macObj = macAd(row[0], row[2], row[3])
     return macObj
  
