@@ -1,5 +1,7 @@
 # spieg
 Spieg - Final Bachelor Project
+This project shows the user their consumer profiles as assessed from their facial features,
+and by counting the appearances of their phone's MAC addresses.
 
 ## Requirements
 - Python3
